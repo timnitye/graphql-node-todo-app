@@ -10,18 +10,54 @@ app.use(bodyParser.json());
 
 app.use('/graphql', graphqlHttp({
     schema: buildSchema(`
-        type RootQuery {
-            todos: [String!]!
+        type Todo {
+            id: ID!
+            name: String!
+            content: String!
+            image: String!
+            location: Location! 
+            isCompleted: Boolean!
         }
+
+        type User {
+            id: ID!
+            username: String!
+            displayname: String!
+        }
+
+        type Location {
+            id: ID!
+            name: String!
+            address: String!
+        }
+
+        type Notification {
+            id: ID!
+            userId: Int!
+            message: String!
+        }
+
+        type RootQuery {
+            allTodos: [Todo!]!
+            Todo(id: ID!): Todo!
+            allLocations: [Location!]
+        }
+
         type RootMutation {
-            createTodo(name: String): String
+            createTodo(name: String!, content: String!, image: String!, location: Location!, isCompleted: Boolean!): Todo!
+            updateTodo(id: ID!, name: String!, image: String!, content: String, isCompleted: Boolean): Todo!
+            deleteTodo(id: ID!): Todo!
         }
         schema {
             query: RootQuery,
             mutation: RootMutation
         }
     `),
+
     rootValue: {
+
+        // will come back to this later
+
         todos: () => {
             return ['eat', 'drink', 'sleep'];
         },
