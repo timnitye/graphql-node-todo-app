@@ -2,7 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const graphqlHttp = require('express-graphql');
 const { buildSchema } = require('graphql');
+const mongoose = require('mongoose');
 
+const Todo = require('./models/todo');
 
 const app = express();
 
@@ -10,43 +12,52 @@ app.use(bodyParser.json());
 
 app.use('/graphql', graphqlHttp({
     schema: buildSchema(`
+
         type Todo {
-            id: ID!
-            name: String!
-            content: String!
+            _id: ID!
+            title: String!
+            description: String!
             image: String!
-            location: Location! 
             isCompleted: Boolean!
         }
 
         type User {
-            id: ID!
+            _id: ID!
             username: String!
             displayname: String!
+            email: String!
         }
 
         type Location {
-            id: ID!
+            _id: ID!
             name: String!
-            address: String!
+            address: String
         }
 
         type Notification {
-            id: ID!
+            _id: ID!
             userId: Int!
             message: String!
         }
+        
+        input TodoInput{
+            title: String!
+            description: String!
+            image: String!
+            isCompleted: Boolean!
+        }
 
         type RootQuery {
-            allTodos: [Todo!]!
-            Todo(id: ID!): Todo!
-            allLocations: [Location!]
+            todos: [Todo!]!
+            todo(_id: ID!): Todo!
+            locations: [Location!]
+            user(email: String, _id: Int): User
         }
 
         type RootMutation {
-            createTodo(name: String!, content: String!, image: String!, location: Location!, isCompleted: Boolean!): Todo!
-            updateTodo(id: ID!, name: String!, image: String!, content: String, isCompleted: Boolean): Todo!
-            deleteTodo(id: ID!): Todo!
+            createTodo(todoInput: TodoInput): Todo
+            updateTodo(_id: ID!, name: String!, description: String, image: String!, isCompleted: Boolean): Todo
+            deleteTodo(_id: ID!): Todo
         }
         schema {
             query: RootQuery,
@@ -56,17 +67,65 @@ app.use('/graphql', graphqlHttp({
 
     rootValue: {
 
-        // will come back to this later
-
         todos: () => {
-            return ['eat', 'drink', 'sleep'];
+           return Todo.find()
+                .then(todos => {
+                    return todos.map(todo => {
+                        return { ...todo._doc, _id: todo._doc._id.toString() };
+                    });
+                })
+                .catch(err =>{
+                    
+                });
+        },
+        todo: (args) => {
+            Todo.find({
+                _id: args.id
+            });
         },
         createTodo: (args) => {
-            const todoName = args.name;
-            return todoName;
+            const todo = new Todo({
+                title: args.todoInput.title,
+                description: args.todoInput.description,
+                image: args.todoInput.image, 
+                isCompleted: new Boolean(args.todoInput.isCompleted)
+            });
+            
+            return todo
+            .save()
+            .then(result => {
+                console.log(result);
+                return { ...result._doc, _id:result._doc._id.toString() };
+            })
+            .catch(err => {
+                console.log(err);
+                throw err;
+            });
+        },
+        updateTodo: args => {
+
+        },
+        deleteTodo: args => {
+         
         }
     },
     graphiql: true
 }));
 
-app.listen(3000);
+
+mongoose.connect(
+    `mongodb+srv://${
+        process.env.MONGO_USER}:${
+        process.env.MONGO_PASSWORD
+    }@cluster0-gje3f.mongodb.net/${
+        process.env.MONGO_DB
+    }?retryWrites=true&w=majority`
+)
+.then(() =>{
+    app.listen(3000);
+})
+.catch(err => {
+    console.log(err);
+});
+
+
