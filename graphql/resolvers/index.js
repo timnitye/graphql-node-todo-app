@@ -5,91 +5,90 @@ const User = require('../../models/user');
 
 
 
-const todos = todoIds => {
-    return Todo.find({_id: {$in: todoIds}})
-    .then(todos => {
-        return todos.map(todo =>{
+const todos = async todoIds => {
+    try{
+        const todos =  await Todo.find({_id: {$in: todoIds}})
+        todos.map(todo =>{
             return { 
                 ...todo._doc, 
                 _id: todo.id, 
                 creator: user.bind(this, todo.creator)
             };
         });
-    })
-    .catch(err => {
+        return todos;
+    } catch (err){
         throw err;
-    });
+    }
 }
 
-const user = userId => {
-    return User.findById(userId)
-        .then(user => {
+const user = async userId => {
+    try{
+        const user = await User.findById(userId)
             return {
                 ...user._doc, 
                 _id: user.id,
                 createdTodos: todos.bind(this, user._doc.createdTodos)
             };
-        })
-        .catch(err =>{
-            throw err;
-        });
+    }catch(err){
+        throw err;
+    }
+    
 }
 
 
 module.exports = {
-    todos: () => {
-       return Todo.find()
-            .then(todos => {
-                return todos.map(todo => {
+    todos: async () => {
+        try{
+            const todos = await Todo.find()
+            return todos
+                .map(todo => {
                     return { 
                         ...todo._doc, 
                         _id: todo.id,
                         creator: user.bind(this, todo._doc.creator)
                     };
-                });
-            })
-            .catch(err =>{
-                throw err;
             });
+          
+        } catch (err){
+            throw err;
+        }
     },
     todo: (args) => {
         Todo.find({
             _id: args.id
         });
     },
-    createTodo: args => {
+    createTodo: async args => {
         const todo = new Todo({
             title: args.todoInput.title,
             description: args.todoInput.description,
             image: args.todoInput.image,
             isCompleted: args.todoInput.isCompleted,
-            creator: '5d22bca1ebe9584b55283860'
+            creator: '5d22feb76820a9622ce6b443' // 5d22bca1ebe9584b55283860
         }); 
         let createdTodo;
-        return todo
-        .save()
-        .then(result => {
+        try{
+            const result = await todo.save();
             createdTodo = { 
                 ...result._doc, 
                 _id:result._doc._id.toString(),
                 creator: user.bind(this, result._doc.creator) 
             }; 
-            return User.findById('5d22bca1ebe9584b55283860')                
-        })
-        .then(user => {
-            if (!user){
+
+            const creator = await User.findById('5d22feb76820a9622ce6b443')  
+
+            if (!creator){
                 throw new Error('User not found.')
             }
-            user.createdTodos.push(todo);
-            return user.save();
-        })
-        .then(result => {
+
+            creator.createdTodos.push(todo);
+            await creator.save();
+
             return createdTodo;
-        })
-        .catch(err => {
-            console.log(err);
+        
+        } catch(err){
             throw err;
-        });
+        }
     },
     updateTodo: args => {
 
@@ -98,29 +97,28 @@ module.exports = {
      
     },
 
-    createUser: args => {
-        return User.findOne({ email:args.userInput.email }).then( user => {
-            if (user){
+    createUser: async args => {
+        try{
+            const existingUser = await User.findOne({ email:args.userInput.email })
+            if (existingUser){
                 throw new Error('User exists already.')
             }
-            return bcrypt
-            .hash(args.userInput.password, 12)
-        })
-        .then(hashedPassword => {
+            const hashedPassword = await bcrypt.hash(args.userInput.password, 12)
+
             const user = new User({
                 username: args.userInput.username,
                 displayname: args.userInput.displayname,
                 email: args.userInput.email,
                 password: hashedPassword 
-            });
-            return user.save();
-        })
-        .then(result => {
+            })
+
+            const result = await user.save();
+
             return { ...result._doc, password: null, _id:result.id  };
-        })
-        .catch(err => {
+   
+        } catch (err){
             throw err;
-        });
+        }
         
     }
 }
