@@ -18,6 +18,10 @@ const todoSchema = new Schema({
     isCompleted:{
         type: Boolean,
         required: true
+    },
+    creator: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
     }
 });
 
