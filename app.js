@@ -102,14 +102,25 @@ app.use('/graphql', graphqlHttp({
                 title: args.todoInput.title,
                 description: args.todoInput.description,
                 image: args.todoInput.image,
-                isCompleted: args.todoInput.isCompleted
-            });
-            
+                isCompleted: args.todoInput.isCompleted,
+                creator: '5d22bca1ebe9584b55283860'
+            }); 
+            let createdTodo;
             return todo
             .save()
             .then(result => {
-                console.log(result);
-                return { ...result._doc, _id:result._doc._id.toString() };
+                createdTodo = { ...result._doc, _id:result._doc._id.toString() }; 
+                return User.findById('5d22bca1ebe9584b55283860')                
+            })
+            .then(user => {
+                if (!user){
+                    throw new Error('User not found.')
+                }
+                user.createdTodos.push(todo);
+                return user.save();
+            })
+            .then(result =>{
+                return createdTodo;
             })
             .catch(err => {
                 console.log(err);
